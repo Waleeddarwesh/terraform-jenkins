@@ -1,57 +1,83 @@
 pipeline {
+
     agent any
 
     environment {
-        // Note: Configure your cloud provider credentials in Jenkins and inject them here.
-        // Example for AWS:
-        // AWS_ACCESS_KEY_ID     = credentials('aws-access-key')
-        // AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
-        TF_IN_AUTOMATION = 'true'
+
+        AWS_ACCESS_KEY_ID = credentials('aws-access-key')
+
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
+
+        AWS_DEFAULT_REGION = 'eu-central-1'
+
     }
 
     stages {
+
         stage('Checkout') {
+
             steps {
+
                 checkout scm
+
             }
+
         }
 
         stage('Terraform Init') {
+
             steps {
-                // Use 'bat' instead of 'sh' if your Jenkins agent is running on Windows
+
                 sh 'terraform init'
             }
+
         }
 
-        stage('Terraform Validate') {
+        stage('Validate') {
+
             steps {
+
                 sh 'terraform validate'
             }
+
         }
 
-        stage('Terraform Plan') {
+        stage('Format Check') {
+
             steps {
+
+                sh 'terraform fmt -check'
+            }
+
+        }
+
+        stage('Plan') {
+
+            steps {
+
                 sh 'terraform plan -out=tfplan'
             }
+
         }
 
         stage('Approval') {
+
             steps {
-                input message: 'Do you want to deploy the Terraform plan?', ok: 'Deploy'
+
+                input "Deploy Infrastructure?"
             }
+
         }
 
-        stage('Terraform Apply') {
+        stage('Apply') {
+
             steps {
-                sh 'terraform apply -input=false tfplan'
+
+                sh 'terraform apply -auto-approve tfplan'
             }
+
         }
+
     }
 
-    post {
-        always {
-            // Clean up the workspace after the build
-            cleanWs()
-        }
-    }
 }
