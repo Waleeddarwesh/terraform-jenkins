@@ -1,15 +1,13 @@
 pipeline {
+
     agent any
 
     environment {
-        // Note: Configure your cloud provider credentials in Jenkins and inject them here.
-        // Example for AWS:
-        // AWS_ACCESS_KEY_ID     = credentials('aws-access-key')
-        // AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
-        TF_IN_AUTOMATION = 'true'
+        AWS_DEFAULT_REGION = 'us-east-1'
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
@@ -18,40 +16,78 @@ pipeline {
 
         stage('Terraform Init') {
             steps {
-                // Use 'bat' instead of 'sh' if your Jenkins agent is running on Windows
-                sh 'terraform init'
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    sh 'terraform init'
+                }
             }
         }
 
-        stage('Terraform Validate') {
+        stage('Validate') {
             steps {
-                sh 'terraform validate'
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    sh 'terraform validate'
+                }
             }
         }
 
-        stage('Terraform Plan') {
+        stage('Format Check') {
             steps {
-                sh 'terraform plan -out=tfplan'
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    sh 'terraform fmt -check'
+                }
+            }
+        }
+
+        stage('Plan') {
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    sh 'terraform plan -out=tfplan'
+                }
             }
         }
 
         stage('Approval') {
             steps {
-                input message: 'Do you want to deploy the Terraform plan?', ok: 'Deploy'
+                input message: 'Terraform plan generated successfully. Do you want to deploy?'
             }
         }
 
-        stage('Terraform Apply') {
+        stage('Apply') {
             steps {
-                sh 'terraform apply -input=false tfplan'
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    sh 'terraform apply -auto-approve tfplan'
+                }
             }
         }
     }
 
     post {
+
+        success {
+            echo 'Infrastructure deployed successfully.'
+        }
+
+        failure {
+            echo 'Pipeline failed.'
+        }
+
         always {
-            // Clean up the workspace after the build
-            cleanWs()
+            archiveArtifacts artifacts: 'tfplan', allowEmptyArchive: true
         }
     }
 }
