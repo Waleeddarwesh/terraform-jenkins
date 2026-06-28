@@ -3,81 +3,91 @@ pipeline {
     agent any
 
     environment {
-
-        AWS_ACCESS_KEY_ID = credentials('aws-access-key')
-
-        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
-
         AWS_DEFAULT_REGION = 'us-east-1'
-
     }
 
     stages {
 
         stage('Checkout') {
-
             steps {
-
                 checkout scm
-
             }
-
         }
 
         stage('Terraform Init') {
-
             steps {
-
-                sh 'terraform init'
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    sh 'terraform init'
+                }
             }
-
         }
 
         stage('Validate') {
-
             steps {
-
-                sh 'terraform validate'
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    sh 'terraform validate'
+                }
             }
-
         }
 
         stage('Format Check') {
-
             steps {
-
-                sh 'terraform fmt -check'
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    sh 'terraform fmt -check'
+                }
             }
-
         }
 
         stage('Plan') {
-
             steps {
-
-                sh 'terraform plan -out=tfplan'
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    sh 'terraform plan -out=tfplan'
+                }
             }
-
         }
 
         stage('Approval') {
-
             steps {
-
-                input "Deploy Infrastructure?"
+                input message: 'Terraform plan generated successfully. Do you want to deploy?'
             }
-
         }
 
         stage('Apply') {
-
             steps {
-
-                sh 'terraform apply -auto-approve tfplan'
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    sh 'terraform apply -auto-approve tfplan'
+                }
             }
-
         }
-
     }
 
+    post {
+
+        success {
+            echo 'Infrastructure deployed successfully.'
+        }
+
+        failure {
+            echo 'Pipeline failed.'
+        }
+
+        always {
+            archiveArtifacts artifacts: 'tfplan', allowEmptyArchive: true
+        }
+    }
 }
