@@ -12,10 +12,6 @@ override.tf.json
 *.override.tf
 *.override.tf.json
 
-# Sensitive variable definitions
-*.tfvars
-*.tfvars.json
-
 # Crash logs and plan output
 crash.log
 *.log
