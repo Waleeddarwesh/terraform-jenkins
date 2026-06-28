@@ -1,0 +1,26 @@
+# Terraform local workspace files
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+terraform.tfstate.*
+.terraform.tfstate.lock.info
+terraform.tfstate.d/
+
+# User-specific override files
+override.tf
+override.tf.json
+*.override.tf
+*.override.tf.json
+
+# Sensitive variable definitions
+*.tfvars
+*.tfvars.json
+
+# Crash logs and plan output
+crash.log
+*.log
+*.tfplan
+*.tfplan.*
+
+# Backup files
+*.backup
