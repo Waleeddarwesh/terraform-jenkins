@@ -19,7 +19,7 @@ module "network" {
 
 module "ec2" {
 
-  source = "./modules/ec2"
+  source = "./modules/EC2"
 
   vpc_id = module.network.vpc_id
 
